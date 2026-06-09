@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="XPoster" />
+    <meta name="theme-color" content="#000000" />
+    <title>X Auto Poster</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- Top bar -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <div>
+            <div class="topbar-logo">𝕏 AutoPoster</div>
+            <div class="topbar-sub">Tech · Coding · AI/ML</div>
+          </div>
+        </div>
+        <div class="topbar-badge" id="topbar-mode-badge">Review mode</div>
+      </div>
+
+      <!-- ── Panel: Home / Generate ── -->
+      <div class="panel active" id="panel-home">
+        <!-- Stats -->
+        <div style="height: 12px"></div>
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-n" id="stat-gen">0</div>
+            <div class="stat-l">Generated</div>
+          </div>
+          <div class="stat">
+            <div class="stat-n" id="stat-sched">0</div>
+            <div class="stat-l">Posted</div>
+          </div>
+          <div class="stat">
+            <div class="stat-n" id="stat-slots">7</div>
+            <div class="stat-l">Slots today</div>
+          </div>
+        </div>
+
+        <!-- Mode -->
+        <div class="card">
+          <div class="card-title">Posting mode</div>
+          <div class="mode-row">
+            <div
+              class="mode-opt active"
+              id="mode-notify"
+              onclick="
+                setMode('notify');
+                updateModeBadge();
+              "
+            >
+              <div class="radio"></div>
+              <div>
+                <div class="mode-label">Review first</div>
+                <div class="mode-sub">You approve each post</div>
+              </div>
+            </div>
+            <div
+              class="mode-opt"
+              id="mode-auto"
+              onclick="
+                setMode('auto');
+                updateModeBadge();
+              "
+            >
+              <div class="radio"></div>
+              <div>
+                <div class="mode-label">Auto-schedule</div>
+                <div class="mode-sub">Notified + opens X</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Topics active today -->
+        <div class="card">
+          <div class="card-title">Topics today</div>
+          <div class="rule-tags" id="topic-tags"></div>
+        </div>
+
+        <!-- Time slots -->
+        <div class="card">
+          <div class="card-title">Post times — tap to toggle</div>
+          <div class="time-grid" id="time-grid"></div>
+        </div>
+
+        <!-- Generate button -->
+        <button class="gen-btn" id="gen-btn" onclick="generatePosts()">
+          <span>⚡</span>
+          <span id="gen-btn-text">Generate today's posts</span>
+        </button>
+
+        <div class="section-gap"></div>
+
+        <!-- Posts list -->
+        <div id="posts-section" style="display: none">
+          <div class="card-title" style="padding: 0 2px; margin-bottom: 8px">
+            Today's posts
+          </div>
+          <div id="posts-list"></div>
+        </div>
+      </div>
+
+      <!-- ── Panel: Schedule ── -->
+      <div class="panel" id="panel-schedule">
+        <div style="height: 12px"></div>
+        <div class="card">
+          <div class="card-title">Scheduled for today</div>
+          <div id="schedule-view"></div>
+        </div>
+      </div>
+
+      <!-- ── Panel: Settings ── -->
+      <div class="panel" id="panel-settings">
+        <div style="height: 12px"></div>
+
+        <!-- Notification permission -->
+        <div class="card">
+          <div class="card-title">Notifications</div>
+          <div class="setting-row">
+            <span id="notif-status">Checking…</span>
+            <div id="notif-btn-row" style="display: none; margin-top: 10px">
+              <button
+                class="notif-enable-btn"
+                onclick="requestNotifPermission()"
+              >
+                🔔 Enable reminders
+              </button>
+              <div class="setting-hint" style="margin-top: 6px">
+                Required so the app can remind you when it's time to post.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Google AI API Key -->
+        <div class="card">
+          <div class="card-title">Google AI API key</div>
+          <div class="setting-row">
+            <label class="setting-label">Your Google AI Studio key</label>
+            <input type="password" id="api-key-input" placeholder="AIza…" />
+            <div class="setting-hint">
+              Get it free at aistudio.google.com/app/apikeys — 60 requests/min
+              on free tier, unlimited use.
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom rules -->
+        <div class="card">
+          <div class="card-title">Post rules & tone</div>
+          <div class="setting-row">
+            <label class="setting-label"
+              >Custom instructions for Google AI</label
+            >
+            <textarea
+              id="rules-input"
+              rows="8"
+              placeholder="Leave blank to use default rules…"
+            ></textarea>
+            <div class="setting-hint">
+              Override the default Tech/AI rules. Be specific about tone, topics
+              to avoid, format preferences etc.
+            </div>
+          </div>
+        </div>
+
+        <button class="save-btn" onclick="saveSettings()">
+          💾 Save settings
+        </button>
+        <div style="height: 16px"></div>
+
+        <!-- How to install -->
+        <div class="card">
+          <div class="card-title">Install on your phone</div>
+          <div
+            style="font-size: 13px; color: var(--gray-600); line-height: 1.7"
+          >
+            <b>Android (Chrome):</b><br />
+            Tap the 3-dot menu → "Add to Home screen"<br /><br />
+            <b>iPhone (Safari):</b><br />
+            Tap Share → "Add to Home Screen"<br /><br />
+            The app will work offline and send you notifications like a native
+            app.
+          </div>
+        </div>
+
+        <!-- How to run locally -->
+        <div class="card">
+          <div class="card-title">Run locally on your PC/phone</div>
+          <div
+            style="font-size: 13px; color: var(--gray-600); line-height: 1.7"
+          >
+            <code
+              style="
+                background: var(--gray-100);
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 12px;
+              "
+              >cd x-autoposter</code
+            ><br /><br />
+            <code
+              style="
+                background: var(--gray-100);
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 12px;
+              "
+              >npx serve .</code
+            ><br /><br />
+            Then open <b>your computer's IP:3000</b> on your phone (both on same
+            WiFi). Install as PWA and notifications will fire locally.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom nav -->
+    <div class="bottom-nav">
+      <button class="nav-btn active" id="nav-home" onclick="switchTab('home')">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </button>
+      <button
+        class="nav-btn"
+        id="nav-schedule"
+        onclick="
+          switchTab('schedule');
+          renderScheduleView();
+        "
+      >
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">Schedule</span>
+      </button>
+      <button
+        class="nav-btn"
+        id="nav-settings"
+        onclick="
+          switchTab('settings');
+          renderSettings();
+        "
+      >
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Settings</span>
+      </button>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/app.js"></script>
+    <script>
+      function updateModeBadge() {
+        const badge = document.getElementById("topbar-mode-badge");
+        badge.textContent =
+          STATE.mode === "auto" ? "Auto-schedule" : "Review mode";
+      }
+
+      function renderScheduleView() {
+        const el = document.getElementById("schedule-view");
+        if (!STATE.posts || !STATE.posts.length) {
+          el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div>Generate posts first from Home</div></div>`;
+          return;
+        }
+        el.innerHTML = STATE.posts
+          .map((p, i) => {
+            const timeLabel = TIME_LABELS[TIMES.indexOf(p.time)] || p.time;
+            return `
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);">
+        <div style="min-width:52px;font-size:12px;font-weight:600;color:var(--gray-400);padding-top:2px">${timeLabel}</div>
+        <div>
+          <div style="font-size:13px;line-height:1.5;color:var(--gray-800)">${esc(p.post)}</div>
+          <span class="type-pill type-${p.type}" style="margin-top:5px;display:inline-block">${p.type}</span>
+        </div>
+      </div>
+    `;
+          })
+          .join("");
+      }
+
+      // Init mode badge
+      document.addEventListener("DOMContentLoaded", () => {
+        updateModeBadge();
+      });
+    </script>
+  </body>
+</html>
