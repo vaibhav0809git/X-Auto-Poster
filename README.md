@@ -4,7 +4,7 @@
 
 ## What it does
 
-- Generates viral Tech/Coding/AI/ML tweets using Google AI (Gemini)
+- Generates viral Tech/Coding/AI/ML tweets using Groq AI (Llama 3.1 70B)
 - Sends push notifications at your scheduled times ("Time to post!")
 - Tap the notification → opens X with your post pre-filled
 - Two modes: **Review first** (you approve) or **Auto-schedule** (notified automatically)
@@ -14,12 +14,13 @@
 
 ## Setup (5 minutes)
 
-### Step 1 — Get a free Google AI API key
+### Step 1 — Get a free Groq API key
 
-1. Go to https://aistudio.google.com/app/apikeys
-2. Click "Create API Key"
-3. Copy it — looks like `AIza…`
-4. Free tier: 60 requests/minute (plenty for posting!)
+1. Go to https://console.groq.com
+2. Sign up or log in
+3. Create a new API key in your account
+4. Copy it — looks like `gsk_…`
+5. Free tier: Plenty of requests for daily posting!
 
 ### Step 2 — Run the app locally
 

@@ -1,4 +1,4 @@
-const CACHE = 'xposter-v2';
+const CACHE = 'xposter-v9';
 
 const ASSETS = [
   '/',

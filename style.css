@@ -136,6 +136,7 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
 .pbtn-post { background: var(--black); color: var(--white); border-color: var(--black); }
 .pbtn-done { background: var(--green); color: var(--white); border-color: var(--green); cursor: default; }
 .pbtn-sched { background: var(--accent); color: var(--white); border-color: var(--accent); cursor: default; }
+.pbtn-del { background: #fee; color: #c33; border-color: #fcc; }
 
 /* ── Skeleton loading ── */
 .skel { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }

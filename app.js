@@ -9,6 +9,7 @@ const STATE = {
   statsScheduled: 0,
   activeTopics: new Set(['DSA', 'System Design', 'AI/ML', 'Python', 'Java', 'LeetCode']),
   customRules: '',
+  customCommand: '',
   notifPermission: Notification?.permission || 'default',
   isGenerating: false,  // Prevent concurrent API calls
 };
@@ -55,6 +56,7 @@ function save() {
     statsScheduled: STATE.statsScheduled,
     activeTopics: [...STATE.activeTopics],
     customRules: STATE.customRules,
+    customCommand: STATE.customCommand,
     alarms: STATE.alarms,
   }));
 }
@@ -69,16 +71,63 @@ function load() {
     if (d.statsScheduled) STATE.statsScheduled = d.statsScheduled;
     if (d.activeTopics) STATE.activeTopics = new Set(d.activeTopics);
     if (d.customRules !== undefined) STATE.customRules = d.customRules;
+    if (d.customCommand !== undefined) STATE.customCommand = d.customCommand;
     if (d.alarms) STATE.alarms = d.alarms;
 
 
-    const savedGeminiKey =
-  localStorage.getItem('gemini_key');
+    const savedGroqKey =
+  localStorage.getItem('groq_key');
 
-if (savedGeminiKey) {
-  STATE.apiKey = savedGeminiKey;
+  if (savedGroqKey) {
+    STATE.apiKey = savedGroqKey;
 }
   } catch(e) {}
+}
+
+// ── Initialize API Key ─────────────────────────────────────────────────────
+function initializeAPIKey() {
+  if (!STATE.apiKey) {
+    const key = prompt('🔑 Enter your Groq API key (starts with gsk_):\n\nGet one free at https://console.groq.com');
+    if (key && key.trim()) {
+      STATE.apiKey = key.trim();
+      localStorage.setItem('groq_key', STATE.apiKey);
+      toast('✅ API key saved');
+    }
+  }
+}
+
+function updateAPIKeyDisplay() {
+  const input = document.getElementById('api-key-input');
+  const status = document.getElementById('api-status');
+  if (input && STATE.apiKey) {
+    // Show masked key
+    input.value = STATE.apiKey.substring(0, 10) + '***' + STATE.apiKey.substring(STATE.apiKey.length - 5);
+    if (status) status.textContent = '✅ API key saved';
+  } else if (input) {
+    input.placeholder = 'gsk_...';
+    if (status) status.textContent = '⚠️ No API key configured';
+  }
+}
+
+function saveAPIKey() {
+  const input = document.getElementById('api-key-input');
+  const key = (input.value || '').trim();
+  
+  if (!key || key.includes('***')) {
+    toast('⚠️ Please enter a valid API key');
+    return;
+  }
+  
+  if (!key.startsWith('gsk_')) {
+    toast('⚠️ API key should start with gsk_');
+    return;
+  }
+  
+  STATE.apiKey = key;
+  localStorage.setItem('groq_key', STATE.apiKey);
+  input.value = key.substring(0, 10) + '***' + key.substring(key.length - 5);
+  document.getElementById('api-status').textContent = '✅ API key saved successfully';
+  toast('✅ API key updated');
 }
 
 // ── Service Worker & Notifications ────────────────────────────────────────
@@ -96,7 +145,6 @@ async function requestNotifPermission() {
   STATE.notifPermission = perm;
   if (perm === 'granted') {
     toast('🔔 Notifications enabled!');
-    renderSettings();
     startAlarmClock();
   } else {
     toast('Notifications blocked — enable in browser settings');
@@ -132,8 +180,8 @@ function checkAlarmsInPage() {
   });
 }
 
-// ── Google AI Studio API ──────────────────────────────────────────────────
-// ── Google AI Studio API ──────────────────────────────────────────────────
+// ── Groq API ──────────────────────────────────────────────────────────────
+// ── Groq API ──────────────────────────────────────────────────────────────
 async function callGoogleAI(prompt) {
   const key = STATE.apiKey;
 
@@ -169,31 +217,25 @@ Example:
 ]
 `;
 
-  // const resp = await fetch(
-  //   `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-
   const resp = await fetch(
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`,
+    `https://api.groq.com/openai/v1/chat/completions`,
     {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`
       },
       body: JSON.stringify({
-        contents: [
+        model: 'llama-3.3-70b-versatile',
+        messages: [
           {
-            parts: [
-              {
-                text: fullPrompt
-              }
-            ]
+            role: 'user',
+            content: fullPrompt
           }
         ],
-        generationConfig: {
-          temperature: 0.9,
-          maxOutputTokens: 1500,
-          responseMimeType: "application/json"
-        }
+        temperature: 0.9,
+        max_tokens: 1500,
+        response_format: { type: 'json_object' }
       })
     }
   );
@@ -202,33 +244,46 @@ Example:
     const errorText = await resp.text();
 
     console.error(
-      'Gemini API Error:',
+      'Groq API Error:',
       errorText
     );
 
     throw new Error(
-      `Gemini Error ${resp.status}: ${errorText}`
+      `Groq Error ${resp.status}: ${errorText}`
     );
   }
 
   const data = await resp.json();
 
   console.log(
-    'Gemini Response:',
+    'Groq Response:',
     data
   );
 
   const raw =
-    data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    data?.choices?.[0]?.message?.content;
 
   if (!raw) {
     throw new Error(
-      'Gemini returned empty content'
+      'Groq returned empty content'
     );
   }
 
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Ensure it's an array
+    if (!Array.isArray(parsed)) {
+      // Maybe it's wrapped in an object with a "data" or "posts" key
+      if (parsed.data && Array.isArray(parsed.data)) {
+        return parsed.data;
+      }
+      if (parsed.posts && Array.isArray(parsed.posts)) {
+        return parsed.posts;
+      }
+      // Otherwise wrap it in an array
+      return [parsed];
+    }
+    return parsed;
   } catch {
     const clean =
       raw
@@ -236,13 +291,23 @@ Example:
         .replace(/```/g, '')
         .trim();
 
-    return JSON.parse(clean);
+    const parsed = JSON.parse(clean);
+    if (!Array.isArray(parsed)) {
+      if (parsed.data && Array.isArray(parsed.data)) {
+        return parsed.data;
+      }
+      if (parsed.posts && Array.isArray(parsed.posts)) {
+        return parsed.posts;
+      }
+      return [parsed];
+    }
+    return parsed;
   }
 }
 // ── Generate posts ─────────────────────────────────────────────────────────
 async function generatePosts() {
   if (STATE.isGenerating) { toast('⏳ Already generating... please wait'); return; }
-  if (!STATE.apiKey) { switchTab('settings'); toast('⚠️ Add your Google AI API key first'); return; }
+  if (!STATE.apiKey) { toast('⚠️ Set GROQ_API_KEY in localStorage or environment'); return; }
   const times = getSelectedTimes();
   if (times.length === 0) { toast('Select at least one time slot'); return; }
 
@@ -250,7 +315,7 @@ async function generatePosts() {
   const btn = document.getElementById('gen-btn');
   const btnText = document.getElementById('gen-btn-text');
   btn.disabled = true;
-  btnText.textContent = 'Generating with Google AI…';
+btnText.textContent = 'Generating with Groq…';
 
   // Show skeletons
   const list = document.getElementById('posts-list');
@@ -267,12 +332,23 @@ async function generatePosts() {
 
   try {
     const topics = [...STATE.activeTopics].join(', ');
-    STATE.posts = await callGoogleAI(
-      `Generate ${times.length} viral tech tweets for today. Topics to cover: ${topics}. Times: ${times.join(', ')}. Mix the post types — include at least one sarcasm and one trending type.`
-    );
+    let prompt = STATE.customCommand || 
+      `Generate {{count}} viral tech tweets for today. Topics to cover: {{topics}}. Times: {{times}}. Mix the post types — include at least one sarcasm and one trending type.`;
+    
+    // Replace template variables
+    prompt = prompt.replace('{{count}}', times.length)
+                   .replace('{{topics}}', topics)
+                   .replace('{{times}}', times.join(', '));
+    
+    const rawPosts = await callGoogleAI(prompt);
 
-    // Map times in order if not already set
-    STATE.posts.forEach((p, i) => { if (!p.time || !TIMES.includes(p.time)) p.time = times[i] || times[0]; });
+    // Normalize posts - handle different response formats from different models
+    STATE.posts = rawPosts.map((p, i) => ({
+      post: p.post || p.text || p.content || p.tweet || p.message || 'Post text unavailable',
+      type: p.type || p.postType || 'insight',
+      time: (p.time && TIMES.includes(p.time)) ? p.time : times[i % times.length],
+      topic: p.topic || 'General'
+    }));
 
     // Set alarms
     STATE.alarms = STATE.posts.map(p => ({ time: p.time, post: p.post }));
@@ -295,7 +371,7 @@ async function generatePosts() {
     if (errMsg.includes('429') || errMsg.includes('Too Many')) {
       list.innerHTML = `<div class="empty"><div class="empty-icon">⏳</div><div>Rate limit hit. Wait a few seconds and try again</div></div>`;
     } else if (errMsg === 'NO_KEY') {
-      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>Add your Google AI API key in Settings</div></div>`;
+      list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>Add your Groq API key in Settings</div></div>`;
     } else {
       list.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div>${errMsg || 'Generation failed — check API key & try again'}</div></div>`;
     }
@@ -318,7 +394,6 @@ function renderPosts() {
   list.innerHTML = STATE.posts.map((p, i) => {
     const typeClass = `type-${p.type || 'insight'}`;
     const timeLabel = TIME_LABELS[TIMES.indexOf(p.time)] || p.time;
-    const isAuto = STATE.mode === 'auto';
     const charLen = (p.post || '').length;
     return `
       <div class="post-card" id="pc-${i}">
@@ -335,10 +410,8 @@ function renderPosts() {
           <span class="char-ct ${charLen > 280 ? 'over' : ''}" id="cc-${i}">${charLen}/280</span>
           <div class="post-btns">
             <button class="pbtn" onclick="editPost(${i})" id="eb-${i}">✏️ Edit</button>
-            ${isAuto
-              ? `<button class="pbtn pbtn-sched">📅 Scheduled</button>`
-              : `<button class="pbtn pbtn-post" onclick="postNow(${i})" id="pb-${i}">📤 Post</button>`
-            }
+            <button class="pbtn pbtn-post" onclick="postNow(${i})" id="pb-${i}">📤 Post</button>
+            <button class="pbtn pbtn-del" onclick="deletePost(${i})" id="db-${i}">🗑️ Delete</button>
           </div>
         </div>
       </div>
@@ -375,6 +448,18 @@ function editPost(i) {
 function updateChar(i, len) {
   const el = document.getElementById(`cc-${i}`);
   if (el) { el.textContent = `${len}/280`; el.className = `char-ct ${len > 280 ? 'over' : ''}`; }
+}
+
+function deletePost(i) {
+  if (confirm('Delete this post?')) {
+    STATE.posts.splice(i, 1);
+    STATE.alarms.splice(i, 1);
+    STATE.statsGenerated = Math.max(0, STATE.statsGenerated - 1);
+    save();
+    renderPosts();
+    renderStats();
+    toast('🗑️ Post deleted');
+  }
 }
 
 function postNow(i) {
@@ -440,6 +525,42 @@ function setMode(m) {
   save();
 }
 
+function saveCustomSettings() {
+  const customCommand = document.getElementById('custom-command-input')?.value || '';
+  const customRules = document.getElementById('custom-rules-input')?.value || '';
+  
+  if (!customCommand.trim() && !customRules.trim()) {
+    toast('⚠️ Enter at least one field');
+    return;
+  }
+  
+  STATE.customCommand = customCommand;
+  STATE.customRules = customRules;
+  save();
+  
+  const statusEl = document.getElementById('settings-status');
+  statusEl.textContent = '✅ Saved!';
+  statusEl.style.color = '#0cce6b';
+  setTimeout(() => {
+    statusEl.textContent = '';
+  }, 2000);
+  toast('✅ Command & Rules saved');
+}
+
+function loadCustomSettings() {
+  const commandEl = document.getElementById('custom-command-input');
+  const rulesEl = document.getElementById('custom-rules-input');
+  
+  if (commandEl) {
+    commandEl.value = STATE.customCommand || 
+      `Generate {{count}} viral tech tweets for today. Topics to cover: {{topics}}. Times: {{times}}. Mix the post types — include at least one sarcasm and one trending type.`;
+  }
+  
+  if (rulesEl) {
+    rulesEl.value = STATE.customRules || DEFAULT_RULES;
+  }
+}
+
 // ── Tabs / nav ────────────────────────────────────────────────────────────
 function switchTab(tab) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -448,45 +569,6 @@ function switchTab(tab) {
   document.getElementById(`nav-${tab}`).classList.add('active');
 }
 
-// ── Settings ──────────────────────────────────────────────────────────────
-function renderSettings() {
-  const el = document.getElementById('notif-status');
-  if (!el) return;
-  if (STATE.notifPermission === 'granted') {
-    el.textContent = '✅ Notifications enabled';
-    el.style.color = 'var(--green)';
-    document.getElementById('notif-btn-row').style.display = 'none';
-  } else {
-    el.textContent = '🔕 Notifications off';
-    el.style.color = 'var(--amber)';
-    document.getElementById('notif-btn-row').style.display = 'block';
-  }
-  document.getElementById('api-key-input').value = STATE.apiKey;
-  document.getElementById('rules-input').value = STATE.customRules;
-}
-
-function saveSettings() {
-  STATE.apiKey =
-    document
-      .getElementById('api-key-input')
-      .value
-      .trim();
-
-  STATE.customRules =
-    document
-      .getElementById('rules-input')
-      .value
-      .trim();
-
-  localStorage.setItem(
-    'gemini_key',
-    STATE.apiKey
-  );
-
-  save();
-
-  toast('✅ Settings saved');
-}
 // ── Helpers ───────────────────────────────────────────────────────────────
 function esc(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
@@ -502,11 +584,11 @@ function toast(msg) {
 // ── Init ──────────────────────────────────────────────────────────────────
 function init() {
   load();
+  initializeAPIKey();
   registerSW();
   buildTimeGrid();
   buildTopicTags();
   renderStats();
-  renderSettings();
   startAlarmClock();
 
   // Restore posts if any from today

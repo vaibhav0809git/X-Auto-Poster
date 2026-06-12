@@ -123,105 +123,142 @@
       <div class="panel" id="panel-settings">
         <div style="height: 12px"></div>
 
-        <!-- Notification permission -->
+        <!-- API Configuration -->
         <div class="card">
-          <div class="card-title">Notifications</div>
-          <div class="setting-row">
-            <span id="notif-status">Checking…</span>
-            <div id="notif-btn-row" style="display: none; margin-top: 10px">
-              <button
-                class="notif-enable-btn"
-                onclick="requestNotifPermission()"
-              >
-                🔔 Enable reminders
-              </button>
-              <div class="setting-hint" style="margin-top: 6px">
-                Required so the app can remind you when it's time to post.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Google AI API Key -->
-        <div class="card">
-          <div class="card-title">Google AI API key</div>
-          <div class="setting-row">
-            <label class="setting-label">Your Google AI Studio key</label>
-            <input type="password" id="api-key-input" placeholder="AIza…" />
-            <div class="setting-hint">
-              Get it free at aistudio.google.com/app/apikeys — 60 requests/min
-              on free tier, unlimited use.
-            </div>
-          </div>
-        </div>
-
-        <!-- Custom rules -->
-        <div class="card">
-          <div class="card-title">Post rules & tone</div>
-          <div class="setting-row">
-            <label class="setting-label"
-              >Custom instructions for Google AI</label
+          <div class="card-title">API Configuration</div>
+          <div style="margin-bottom: 12px">
+            <label
+              style="
+                display: block;
+                font-size: 12px;
+                color: var(--gray-600);
+                margin-bottom: 6px;
+              "
+              >Groq API Key</label
             >
-            <textarea
-              id="rules-input"
-              rows="8"
-              placeholder="Leave blank to use default rules…"
-            ></textarea>
-            <div class="setting-hint">
-              Override the default Tech/AI rules. Be specific about tone, topics
-              to avoid, format preferences etc.
+            <input
+              type="password"
+              id="api-key-input"
+              placeholder="gsk_..."
+              style="
+                width: 100%;
+                padding: 10px;
+                border: 1px solid var(--gray-200);
+                border-radius: 6px;
+                font-family: monospace;
+                font-size: 12px;
+              "
+            />
+            <div
+              style="font-size: 11px; color: var(--gray-500); margin-top: 6px"
+            >
+              Get free key at
+              <a href="https://console.groq.com" target="_blank"
+                >console.groq.com</a
+              >
             </div>
           </div>
+          <button
+            onclick="saveAPIKey()"
+            style="
+              width: 100%;
+              padding: 10px;
+              background: #000;
+              color: #fff;
+              border: none;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+            "
+          >
+            Save API Key
+          </button>
+          <div
+            id="api-status"
+            style="margin-top: 8px; font-size: 12px; color: var(--gray-600)"
+          ></div>
         </div>
 
-        <button class="save-btn" onclick="saveSettings()">
-          💾 Save settings
+        <!-- Custom Command -->
+        <div class="card">
+          <div class="card-title">Custom Generation Command</div>
+          <label
+            style="
+              display: block;
+              font-size: 12px;
+              color: var(--gray-600);
+              margin-bottom: 6px;
+            "
+            >Prompt for AI</label
+          >
+          <textarea
+            id="custom-command-input"
+            placeholder="Generate {{count}} viral tech tweets for today. Topics: {{topics}}. Times: {{times}}..."
+            style="
+              width: 100%;
+              padding: 10px;
+              border: 1px solid var(--gray-200);
+              border-radius: 6px;
+              font-family: monospace;
+              font-size: 12px;
+              min-height: 80px;
+              resize: vertical;
+            "
+          ></textarea>
+          <div style="font-size: 11px; color: var(--gray-500); margin-top: 6px">
+            Variables: {{count}}, {{topics}}, {{times}}
+          </div>
+        </div>
+
+        <!-- Custom Rules -->
+        <div class="card">
+          <div class="card-title">System Rules & Style Guide</div>
+          <label
+            style="
+              display: block;
+              font-size: 12px;
+              color: var(--gray-600);
+              margin-bottom: 6px;
+            "
+            >Rules for generating posts</label
+          >
+          <textarea
+            id="custom-rules-input"
+            placeholder="You are a viral Tech Twitter personality..."
+            style="
+              width: 100%;
+              padding: 10px;
+              border: 1px solid var(--gray-200);
+              border-radius: 6px;
+              font-family: monospace;
+              font-size: 12px;
+              min-height: 150px;
+              resize: vertical;
+            "
+          ></textarea>
+        </div>
+
+        <!-- Save Settings -->
+        <button
+          onclick="saveCustomSettings()"
+          style="
+            width: 100%;
+            padding: 12px;
+            background: #000;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 12px;
+          "
+        >
+          Save Command & Rules
         </button>
-        <div style="height: 16px"></div>
-
-        <!-- How to install -->
-        <div class="card">
-          <div class="card-title">Install on your phone</div>
-          <div
-            style="font-size: 13px; color: var(--gray-600); line-height: 1.7"
-          >
-            <b>Android (Chrome):</b><br />
-            Tap the 3-dot menu → "Add to Home screen"<br /><br />
-            <b>iPhone (Safari):</b><br />
-            Tap Share → "Add to Home Screen"<br /><br />
-            The app will work offline and send you notifications like a native
-            app.
-          </div>
-        </div>
-
-        <!-- How to run locally -->
-        <div class="card">
-          <div class="card-title">Run locally on your PC/phone</div>
-          <div
-            style="font-size: 13px; color: var(--gray-600); line-height: 1.7"
-          >
-            <code
-              style="
-                background: var(--gray-100);
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 12px;
-              "
-              >cd x-autoposter</code
-            ><br /><br />
-            <code
-              style="
-                background: var(--gray-100);
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 12px;
-              "
-              >npx serve .</code
-            ><br /><br />
-            Then open <b>your computer's IP:3000</b> on your phone (both on same
-            WiFi). Install as PWA and notifications will fire locally.
-          </div>
-        </div>
+        <div
+          id="settings-status"
+          style="font-size: 12px; color: var(--gray-600); text-align: center"
+        ></div>
       </div>
     </div>
 
@@ -247,7 +284,7 @@
         id="nav-settings"
         onclick="
           switchTab('settings');
-          renderSettings();
+          updateAPIKeyDisplay();
         "
       >
         <span class="nav-icon">⚙️</span>
